@@ -1,5 +1,5 @@
 # Import the dependencies.
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request 
 import datetime as dt
 from sqlalchemy import create_engine, func
 from sqlalchemy.orm import Session
@@ -49,13 +49,13 @@ app = Flask(__name__)
 def home():
     """List all the available routes."""
     return (
-        f"Hawaii Climate API.<br/>"
-        f"Available Routes:<br/>"
-        f"/api/v1.0/precipitation<br/>"
-        f"/api/v1.0/stations<br/>"
-        f"/api/v1.0/tobs<br/>"
-        f"/api/v1.0/<start><br/>"
-        f"/api/v1.0/<start>/<end><br/>"
+        f"<h1>Hawaii Climate API.</h1>"
+        f"<h3>Available Routes:</h3>"
+        f'<a href="/api/v1.0/precipitation">Precipitation</a><br/>'
+        f'<a href="/api/v1.0/stations">Stations</a><br/>'
+        f'<a href="/api/v1.0/tobs">Temperature Observations</a><br/>'
+        f'<a href="/api/v1.0/start">Start Date to End of Dataset (Enter YYYY-MM-DD)</a><br/>'
+        f'<a href="/api/v1.0/start/end">Start Date to End Date/Range (Enter YYYY-MM-DD/YYYY-MM-DD)</a><br/>'
     )
 
 # The precipitation route is the second route. It returns a jsonified precepitation data for the last year in the database. 
@@ -70,14 +70,14 @@ def precipitation():
     precipitation_data = {date: prcp for date, prcp in results}
     return jsonify(precipitation_data)
 
-# The stations route lists all nine stations that are in the database. 
+# The stations route lists all nine stations that are in the database along with their names. 
 @app.route("/api/v1.0/stations")
 def stations():
     """Return a JSON list of stations from the dataset"""
     session = Session(engine)
-    results = session.query(Station.station).all()
+    results = session.query(Station.station, Station.name).all()
     session.close()
-    station_list = [station[0] for station in results]
+    station_list = [{"station": station[0], "name": station[1]} for station in results]
     return jsonify(station_list)
 
 # The tobs route retuns jsonified data for the most active station (USC00519281) for a year. 
@@ -109,7 +109,7 @@ def temp_stats_start(start):
     session.close()
 
     if results[0][0] is None:
-        return jsonify({"Date not found. Please enter a start date"}), 404
+        return jsonify({"error": "Date not found. Please enter a valid start date (YYYY-MM-DD)"}), 404
     temp_stats = {
         "start_date": start,
         "min_temp": results[0][0],
@@ -137,7 +137,7 @@ def temp_stats_range(start, end):
     session.close()
 
     if results[0][0] is None:
-        return jsonify({"Date range not found. Please enter start and end date."}), 404
+        return jsonify({"error": "Date range not found. Please enter valid start and end dates (YYYY-MM-DD/YYYY-MM-DD)."}), 404
     
     temp_stats = OrderedDict([
         ("start_date", start),
